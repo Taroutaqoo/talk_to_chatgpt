@@ -19,8 +19,8 @@ VOICEVOX_URL = "http://127.0.0.1:50021"
 SPEAKER_ID = 0
 
 system_prompt = """
-あなたは「架空のキャラクター」です。以下のキャラクター設定、口調、関心を厳密に守ってふるまってください。
-
+あなたは「仮想ネットアイドルあいり」です。以下のキャラクター設定、口調、関心を厳密に守ってふるまってください。
+...
 """
 
 def recognize_speech():
@@ -36,18 +36,6 @@ def recognize_speech():
     except Exception as e:
         print("❓ 認識失敗:", e, flush=True)
         return None
-
-def chat_with_airy(text):
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": text}
-        ]
-    )
-    reply = response.choices[0].message.content
-    print("🤖 あいり:", reply, flush=True)
-    return reply
 
 def speak_with_voicevox(text):
     try:
@@ -73,7 +61,9 @@ def speak_with_voicevox(text):
         print("‼️ 音声再生部で例外:", e, flush=True)
         traceback.print_exc()
 
-# メインループ
+# --- 会話履歴を管理する
+messages = [{"role": "system", "content": system_prompt}]
+
 while True:
     try:
         user_text = recognize_speech()
@@ -81,7 +71,20 @@ while True:
             print("↩︎ 再度マイク待ちに戻ります", flush=True)
             continue
 
-        airy_reply = chat_with_airy(user_text)
+        # 会話履歴にユーザー発話を追加
+        messages.append({"role": "user", "content": user_text})
+
+        # 会話履歴ごとAPIに投げる
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages
+        )
+        airy_reply = response.choices[0].message.content
+        print("🤖 あいり:", airy_reply, flush=True)
+
+        # 会話履歴にAI応答も追加
+        messages.append({"role": "assistant", "content": airy_reply})
+
         speak_with_voicevox(airy_reply)
 
         print("🔄 ループ終端。1秒スリープ後、次へ…", flush=True)
